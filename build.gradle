@@ -1,0 +1,85 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.24'
+}
+
+group = 'solventum'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    testRuntimeOnly {
+        extendsFrom implementation
+    }
+    deployment {
+        extendsFrom implementation
+    }
+    bootRunRuntime {
+        extendsFrom implementation
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Core shared dependencies
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.4.5')
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation 'com.google.guava:guava:32.1.3-jre'
+    implementation 'com.bucket4j:bucket4j-core:8.3.0'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.rest-assured:rest-assured:5.4.0'
+
+    // Dependencies for test runtime (Rest Assured tests)
+    testRuntimeOnly 'org.springframework.boot:spring-boot-starter-web'
+
+    // Dependencies for deployment
+    deployment('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.springframework', module: 'spring-webmvc'
+    }
+    deployment 'org.springframework:spring-web:6.1.5'
+    deployment 'org.springframework:spring-webmvc:6.1.5'
+
+    // Dependencies for bootRun
+    bootRunRuntime('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.springframework', module: 'spring-webmvc'
+    }
+    bootRunRuntime 'org.springframework:spring-web:6.1.5'
+    bootRunRuntime 'org.springframework:spring-webmvc:6.1.5'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+task deploymentJar(type: Jar) {
+    archiveClassifier = 'deployment'
+    manifest {
+        attributes 'Main-Class': 'solventum.challenge.ChallengeApplication'
+    }
+    from sourceSets.main.output
+    from sourceSets.main.resources // Explicitly include resources
+    from configurations.deployment.collect { zipTree(it) }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+bootRun {
+    classpath = sourceSets.main.output + configurations.bootRunRuntime
+}
